@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>PRINTY · 花纹字母生成器</title>
+  <link rel="icon" type="image/png" sizes="64x64" href="./assets/printy-icon.png">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="top-bar">
+    <img class="wordmark" src="./assets/pattlet-wordmark.png" width="1165" height="266" alt="PATTLET">
+  </header>
+  <main>
+    <div class="input-heading">
+      <label for="letters">输入内容</label>
+      <div class="input-actions">
+        <output id="input-count" class="count" for="letters" aria-live="off">10 / 30</output>
+        <button id="new-draft" type="button" class="draft-action" disabled>新建草稿</button>
+      </div>
+    </div>
+    <textarea id="letters" rows="2" wrap="off" spellcheck="false"
+              autocapitalize="none" autocomplete="off" aria-describedby="input-note input-count" disabled>PATTLET
+花纹字</textarea>
+    <p id="input-note" class="note" aria-live="polite">支持中英文、数字和部分符号 · 最多 3 行</p>
+    <div class="draft-status" id="draft-status" hidden>
+      <p id="draft-note" class="note" role="status"></p>
+      <button id="retry-draft" type="button" class="draft-action" hidden>重试保存</button>
+    </div>
+
+    <section class="ticket" id="preview-ticket" aria-labelledby="preview-label">
+      <div class="preview" id="preview">
+        <div class="preview-tools">
+          <h2 class="preview-label" id="preview-label">实时预览</h2>
+          <div class="history-actions" role="group" aria-label="编辑历史">
+            <button id="undo-edit" type="button" disabled>撤销</button>
+            <button id="redo-edit" type="button" disabled>重做</button>
+          </div>
+        </div>
+        <div class="preview-viewport" id="preview-viewport" role="region" aria-label="作品预览">
+          <div class="preview-art" id="preview-art">
+            <canvas id="art" hidden aria-label="实时预览"></canvas>
+            <div id="glyph-selection" aria-hidden="true" hidden></div>
+          </div>
+          <p id="placeholder" class="note">正在加载花纹和字形…</p>
+        </div>
+      </div>
+      <p id="layout-note" class="note" hidden>字太小？分成几行试试。</p>
+    </section>
+
+    <!--
+      Lucide: SwatchBook, Type, and SlidersHorizontal
+      ISC License
+      Copyright (c) 2026 Lucide Icons and Contributors
+
+      Permission to use, copy, modify, and/or distribute this software for any
+      purpose with or without fee is hereby granted, provided that the above
+      copyright notice and this permission notice appear in all copies.
+
+      THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+      WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+      MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+      ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+      WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+      ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+      OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+      Type is derived from Feather, under the MIT License.
+      Copyright (c) 2013-present Cole Bemis
+
+      Permission is hereby granted, free of charge, to any person obtaining a copy
+      of this software and associated documentation files (the "Software"), to deal
+      in the Software without restriction, including without limitation the rights
+      to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+      copies of the Software, and to permit persons to whom the Software is
+      furnished to do so, subject to the following conditions:
+
+      The above copyright notice and this permission notice shall be included in all
+      copies or substantial portions of the Software.
+
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+      IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+      FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+      AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+      LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+      SOFTWARE.
+    -->
+    <div class="editor-controls" role="group" aria-label="编辑分类">
+      <button id="fabric-tab" type="button" aria-controls="fabric-panel" aria-pressed="true">
+        <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 17a4 4 0 0 1-8 0V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2Z"/>
+          <path d="M16.7 13H19a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H7"/>
+          <path d="M 7 17h.01"/>
+          <path d="m11 8 2.3-2.3a2.4 2.4 0 0 1 3.404.004L18.6 7.6a2.4 2.4 0 0 1 .026 3.434L9.9 19.8"/>
+        </svg>
+        <span>花纹</span>
+      </button>
+      <button id="typeface-tab" type="button" aria-controls="typeface-panel" aria-pressed="false">
+        <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 4v16"/>
+          <path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/>
+          <path d="M9 20h6"/>
+        </svg>
+        <span>字形</span>
+      </button>
+      <button id="spacing-tab" type="button" aria-controls="spacing-panel" aria-pressed="false">
+        <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 5H3M12 19H3M14 3v4M16 17v4M21 12h-9M21 19h-5M21 5h-7M8 10v4M8 12H3"/>
+        </svg>
+        <span>调整</span>
+      </button>
+    </div>
+
+    <div class="editor-panel" id="editor-panel">
+    <section id="typeface-panel" aria-labelledby="typeface-tab" hidden>
+      <div class="choices font-modes" role="group" aria-label="字体应用方式">
+        <button type="button" data-font-mode="uniform" aria-pressed="true" disabled>整串统一</button>
+        <button type="button" data-font-mode="mixed" aria-pressed="false" disabled>单字混搭</button>
+      </div>
+      <div id="mixed-glyph-slot" hidden></div>
+      <div class="choices font-choices" role="group" aria-label="英文与数字字体">
+        <button type="button" class="font-choice" data-font="fraunces" aria-pressed="true" disabled>
+          <span class="font-sample" aria-hidden="true">Aa</span><span class="font-name">Fraunces</span>
+        </button>
+        <button type="button" class="font-choice" data-font="mystery" aria-pressed="false" disabled>
+          <span class="font-sample" aria-hidden="true">Aa</span><span class="font-name">Mystery Quest</span>
+        </button>
+        <button type="button" class="font-choice" data-font="germania" aria-pressed="false" disabled>
+          <span class="font-sample" aria-hidden="true">Aa</span><span class="font-name">Germania One</span>
+        </button>
+        <button type="button" class="font-choice" data-font="sonsie" aria-pressed="false" disabled>
+          <span class="font-sample" aria-hidden="true">Aa</span><span class="font-name">Sonsie One</span>
+        </button>
+        <button type="button" class="font-choice" data-font="kavoon" aria-pressed="false" disabled>
+          <span class="font-sample" aria-hidden="true">Aa</span><span class="font-name">Kavoon</span>
+        </button>
+        <button type="button" class="font-choice" data-font="fugaz" aria-pressed="false" disabled>
+          <span class="font-sample" aria-hidden="true">Aa</span><span class="font-name">Fugaz One</span>
+        </button>
+      </div>
+      <h2 class="font-group-label" id="han-font-label">中文字体</h2>
+      <div class="choices font-choices" role="group" aria-labelledby="han-font-label">
+        <button type="button" class="font-choice" data-font="noto" data-han-font aria-pressed="true" disabled>
+          <span class="font-sample" aria-hidden="true">梦</span><span class="font-name">Noto Sans SC Black</span>
+        </button>
+        <button type="button" class="font-choice" data-font="maoken" data-han-font aria-pressed="false" disabled>
+          <span class="font-sample" aria-hidden="true">梦</span><span class="font-name">猫啃珠圆体</span>
+        </button>
+      </div>
+      <section class="adjust-group letter-outline" aria-labelledby="outline-label">
+        <h2 id="outline-label">字母轮廓</h2>
+        <div id="typeface-glyph-slot" data-glyph-slot></div>
+        <button class="switch" type="button" id="fabric-edging" role="switch"
+                aria-controls="edging-palette" aria-checked="false" disabled>布艺锁边<span class="switch-track" aria-hidden="true"></span></button>
+        <div id="edging-palette" hidden>
+          <h3 id="edging-color-label">锁边颜色</h3>
+          <div class="choices edging-colors" role="group" aria-labelledby="edging-color-label">
+            <button type="button" class="edging-color" data-color="#ad5e7b" data-rim="#8d4766" aria-pressed="true"><span aria-hidden="true"></span>莓紫</button>
+            <button type="button" class="edging-color" data-color="#8269a5" data-rim="#634d82" aria-pressed="false"><span aria-hidden="true"></span>薰衣草</button>
+            <button type="button" class="edging-color" data-color="#537ea6" data-rim="#3c6085" aria-pressed="false"><span aria-hidden="true"></span>雾蓝</button>
+            <button type="button" class="edging-color" data-color="#628066" data-rim="#49674d" aria-pressed="false"><span aria-hidden="true"></span>苔绿</button>
+            <button type="button" class="edging-color" data-color="#a45f4c" data-rim="#804536" aria-pressed="false"><span aria-hidden="true"></span>陶土</button>
+            <button type="button" class="edging-color" data-color="#745a55" data-rim="#58413d" aria-pressed="false"><span aria-hidden="true"></span>可可</button>
+          </div>
+        </div>
+        <div class="adjust-controls">
+          <button class="switch" type="button" id="glyph-outline" role="switch"
+                  aria-controls="outline-settings" aria-checked="true" disabled>普通描边<span class="switch-track" aria-hidden="true"></span></button>
+          <p id="outline-lock-note" class="note" hidden>关闭布艺锁边后可调整描边。</p>
+          <div id="outline-settings" hidden>
+            <div class="spacing-heading color-heading">
+              <label for="outline-color">描边颜色</label>
+              <input id="outline-color" type="color" value="#876a83" disabled>
+            </div>
+            <div class="spacing-heading">
+              <label for="outline-width">描边粗细</label>
+              <output id="outline-width-value" for="outline-width">2 px</output>
+            </div>
+            <input id="outline-width" type="range" min="1" max="8" step="1" value="2" disabled>
+          </div>
+        </div>
+      </section>
+      <details class="credits note">
+        <summary>字体许可</summary>
+        <pre>
+Copyright 2018 The Fraunces Project Authors (https://github.com/undercasetype/Fraunces)
+
+Copyright (c) 2012, Font Diner (www.fontdiner.com),
+with Reserved Font Name "Mystery Quest".
+
+Copyright (c) 2011 by John Vargas Beltran (john.vargasbeltran@gmail.com), with Reserved Font Name "Germania One"
+
+Copyright (c) 2011 by Sorkin Type Co (www.sorkintype.com),
+with Reserved Font Names "Sonsie" and "Sonsie One"
+
+Copyright (c) 2011-2012, Sorkin Type Co (www.sorkintype.com) with Reserved Font Name 'Kavoon'
+
+Copyright (c) 2011 by LatinoType Limitada (info@latinotype.com), with Reserved Font Names "Fugaz" and "Fugaz One"
+
+Noto Sans SC Black
+Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'
+
+猫啃珠圆体 (Maoken Zhuyuan)
+Copyright 2022-2023 LongZhuTi Project Authors.
+Copyright 2020 The RocknRoll Project Authors (https://github.com/fontworks-fonts/RocknRoll)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is copied below, and is also available with a FAQ at:
+http://scripts.sil.org/OFL
+
+
+-----------------------------------------------------------
+SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+-----------------------------------------------------------
+PREAMBLE
+The goals of the Open Font License (OFL) are to stimulate worldwide
+development of collaborative font projects, to support the font creation
+efforts of academic and linguistic communities, and to provide a free and
+open framework in which fonts may be shared and improved in partnership
+with others.
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The
+fonts, including any derivative works, can be bundled, embedded,
+redistributed and/or sold with any software provided that any reserved
+names are not used by derivative works. The fonts and derivatives,
+however, cannot be released under any other type of license. The
+requirement for fonts to remain under this license does not apply
+to any document created using the fonts or their derivatives.
+DEFINITIONS
+"Font Software" refers to the set of files released by the Copyright
+Holder(s) under this license and clearly marked as such. This may
+include source files, build scripts and documentation.
+
+"Reserved Font Name" refers to any names specified as such after the
+copyright statement(s).
+
+"Original Version" refers to the collection of Font Software components as
+distributed by the Copyright Holder(s).
+"Modified Version" refers to any derivative made by adding to, deleting,
+or substituting -- in part or in whole -- any of the components of the
+Original Version, by changing formats or by porting the Font Software to a
+new environment.
+
+"Author" refers to any designer, engineer, programmer, technical
+writer or other person who contributed to the Font Software.
+PERMISSION &amp; CONDITIONS
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of the Font Software, to use, study, copy, merge, embed, modify,
+redistribute, and sell modified and unmodified copies of the Font
+Software, subject to the following conditions:
+
+1) Neither the Font Software nor any of its individual components,
+in Original or Modified Versions, may be sold by itself.
+2) Original or Modified Versions of the Font Software may be bundled,
+redistributed and/or sold with any software, provided that each copy
+contains the above copyright notice and this license. These can be
+included either as stand-alone text files, human-readable headers or
+in the appropriate machine-readable metadata fields within text or
+binary files as long as those fields can be easily viewed by the user.
+3) No Modified Version of the Font Software may use the Reserved Font
+Name(s) unless explicit written permission is granted by the corresponding
+Copyright Holder. This restriction only applies to the primary font name as
+presented to the users.
+4) The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+Software shall not be used to promote, endorse or advertise any
+Modified Version, except to acknowledge the contribution(s) of the
+Copyright Holder(s) and the Author(s) or with their explicit written
+permission.
+5) The Font Software, modified or unmodified, in part or in whole,
+must be distributed entirely under this license, and must not be
+distributed under any other license. The requirement for fonts to
+remain under this license does not apply to any document created
+using the Font Software.
+
+TERMINATION
+This license becomes null and void if any of the above conditions are
+not met.
+DISCLAIMER
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+OTHER DEALINGS IN THE FONT SOFTWARE.
+        </pre>
+      </details>
+    </section>
+
+    <section id="fabric-panel" aria-labelledby="fabric-tab">
+      <div class="spacing-heading theme-heading">
+        <h2 id="theme-label">主题搭配</h2>
+        <div class="pattern-actions">
+          <input id="custom-file" class="pattern-file" type="file" aria-label="上传纹样" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" disabled>
+          <label for="custom-file" class="upload-choice upload-primary">上传纹样</label>
+          <button type="button" id="random-fabrics" disabled>
+            <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 20 20" fill="none"
+                 stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 5h2c4 0 6 10 10 10h2m-3-3 3 3-3 3M3 15h2c4 0 6-10 10-10h2m-3-3 3 3-3 3"/>
+            </svg>
+            随机换一组
+          </button>
+        </div>
+      </div>
+      <p id="custom-note" class="note" role="status"></p>
+      <div class="choices theme-choices" role="group" aria-labelledby="theme-label">
+        <button type="button" class="theme" data-theme="fresh" aria-pressed="false" disabled>清新棉布</button>
+        <button type="button" class="theme" data-theme="candy" aria-pressed="true" disabled>复古撞色</button>
+        <button type="button" class="theme" data-theme="special" aria-pressed="false" disabled>特殊材质</button>
+        <button type="button" class="theme" data-theme="holiday" aria-pressed="false" disabled>节日限定</button>
+        <button type="button" class="theme" data-theme="minnan" aria-pressed="false" disabled>闽南花纸</button>
+      </div>
+      <div class="glyph-editor">
+        <h2>单字编辑</h2>
+        <div id="fabric-glyph-slot" data-glyph-slot>
+          <div id="glyph-picker">
+            <p id="selection-note" class="note" role="status">输入文字后可逐字编辑。</p>
+            <div class="choices" id="glyphs" role="group" aria-label="字符位置"></div>
+          </div>
+        </div>
+        <div class="pattern-library" id="pattern-library">
+          <h2 id="pattern-library-label">选择花纹</h2>
+          <div class="choices pattern-source-tabs" role="group" aria-labelledby="pattern-library-label">
+            <button type="button" data-library="builtin" aria-controls="swatches" aria-pressed="true" disabled>内置纹样</button>
+            <button type="button" data-library="custom" aria-controls="swatches" aria-pressed="false" disabled>我的纹样</button>
+            <button type="button" data-library="favorites" aria-controls="swatches" aria-pressed="false" disabled>我的收藏</button>
+          </div>
+          <details id="pattern-controls">
+            <summary id="pattern-label">纹样变换</summary>
+            <div role="group" aria-labelledby="pattern-label">
+              <div class="spacing-heading">
+                <label for="pattern-scale">纹样缩放</label>
+                <output for="pattern-scale">100%</output>
+                <button class="slider-reset" id="pattern-reset" type="button" disabled>恢复默认</button>
+              </div>
+              <input id="pattern-scale" data-pattern="scale" type="range" min="50" max="200" step="1" value="100" disabled>
+              <div class="spacing-heading">
+                <label for="pattern-x">水平偏移</label>
+                <output for="pattern-x">0%</output>
+              </div>
+              <input id="pattern-x" data-pattern="x" type="range" min="-50" max="50" step="1" value="0" disabled>
+              <div class="spacing-heading">
+                <label for="pattern-y">垂直偏移</label>
+                <output for="pattern-y">0%</output>
+              </div>
+              <input id="pattern-y" data-pattern="y" type="range" min="-50" max="50" step="1" value="0" disabled>
+            </div>
+          </details>
+          <div id="custom-empty" class="pattern-empty" hidden>
+            <p>上传喜欢的图片，做成专属花纹。</p>
+            <label for="custom-file" class="slider-reset upload-choice">上传第一张</label>
+          </div>
+          <div id="favorites-empty" class="pattern-empty" hidden>
+            <p>还没有收藏的花纹。</p>
+            <p class="note">点花纹右上角的星标，就能在这里找到。</p>
+          </div>
+          <div class="draft-status" id="favorites-status" hidden>
+            <p id="favorites-note" class="note" role="status"></p>
+            <button id="retry-favorites" type="button" class="draft-action" hidden>重试</button>
+          </div>
+          <div class="fabric-source" id="pattern-fill-control" hidden>
+            <label for="pattern-fill">填充方式</label>
+            <select id="pattern-fill">
+              <option value="single">单图填充</option>
+              <option value="tile">平铺</option>
+            </select>
+          </div>
+          <p id="fabric-note" class="note" role="status" hidden></p>
+          <div class="fabric-source" id="builtin-filter">
+            <label for="fabric-theme">主题筛选</label>
+            <select id="fabric-theme" disabled></select>
+          </div>
+          <div class="choices" id="swatches" role="group" aria-label="花纹列表"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="spacing-panel" aria-labelledby="spacing-tab" hidden>
+      <div id="spacing-glyph-slot" data-glyph-slot></div>
+      <section class="adjust-group" aria-labelledby="overall-label">
+        <h2 id="overall-label">整体排版</h2>
+        <div class="spacing-heading">
+          <label for="letter-gap">字间距</label>
+          <output id="letter-gap-value" for="letter-gap">12 px</output>
+          <button class="slider-reset" id="letter-gap-reset" type="button" disabled>复位字距</button>
+        </div>
+        <input id="letter-gap" type="range" min="-32" max="44" step="1" value="12" disabled>
+        <div class="adjust-controls">
+          <div class="spacing-heading">
+            <h3 id="line-layout-label">多行对齐</h3>
+            <button class="slider-reset" id="line-layout-reset" type="button" disabled>复位行距和对齐</button>
+          </div>
+          <div class="choices" role="group" aria-labelledby="line-layout-label">
+            <button type="button" data-align="left" aria-pressed="false" disabled>左对齐</button>
+            <button type="button" data-align="center" aria-pressed="true" disabled>居中</button>
+            <button type="button" data-align="right" aria-pressed="false" disabled>右对齐</button>
+          </div>
+          <div class="spacing-heading line-gap-heading">
+            <label for="line-gap">行间距</label>
+            <output id="line-gap-value" for="line-gap">18 px</output>
+          </div>
+          <input id="line-gap" type="range" min="0" max="64" step="1" value="18" disabled>
+        </div>
+      </section>
+      <section class="adjust-group" aria-labelledby="single-label">
+        <div class="single-adjust-header">
+          <h2 id="single-label">单字调整</h2>
+          <details id="glyph-reset-menu" hidden>
+            <summary class="slider-reset">单字复位</summary>
+            <div class="choices" role="group" aria-label="单字复位项目">
+              <button id="glyph-size-reset" type="button" disabled>字号</button>
+              <button id="proportion-reset" type="button" disabled>宽高</button>
+              <button id="glyph-position-reset" type="button" disabled>位置</button>
+            </div>
+          </details>
+        </div>
+        <div class="adjust-controls">
+          <div class="spacing-heading">
+            <label for="glyph-size">单字字号</label>
+            <output id="glyph-size-value" for="glyph-size">100%</output>
+          </div>
+          <input id="glyph-size" type="range" min="60" max="160" step="1" value="100" disabled>
+        </div>
+        <div class="adjust-controls">
+          <div role="group" aria-label="宽高比例">
+            <div class="spacing-heading">
+              <label for="glyph-width">字母宽度</label>
+              <output for="glyph-width">100%</output>
+            </div>
+            <input id="glyph-width" data-proportion="width" type="range" min="60" max="140" value="100" disabled>
+            <div class="spacing-heading">
+              <label for="glyph-height">字母高度</label>
+              <output for="glyph-height">100%</output>
+            </div>
+            <input id="glyph-height" data-proportion="height" type="range" min="60" max="140" value="100" disabled>
+          </div>
+        </div>
+        <div class="adjust-controls">
+          <div class="spacing-heading">
+            <h3 id="position-label">位置</h3>
+            <button class="slider-reset" id="natural-position" type="button" aria-label="整串字自然错落" disabled>自然错落</button>
+            <button class="slider-reset" id="all-position-reset" type="button" disabled>整串复位</button>
+          </div>
+          <div role="group" aria-labelledby="position-label">
+            <div class="spacing-heading">
+              <label for="glyph-offset">上下偏移</label>
+              <output for="glyph-offset">0 px</output>
+            </div>
+            <input id="glyph-offset" data-position="y" type="range" min="-18" max="18" value="0" disabled>
+            <div class="spacing-heading">
+              <label for="glyph-angle">旋转角度</label>
+              <output for="glyph-angle">0°</output>
+            </div>
+            <input id="glyph-angle" data-position="angle" type="range" min="-9" max="9" value="0" disabled>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    </div>
+    <footer class="save-area">
+      <button type="button" class="save" id="save" disabled>下载透明 PNG</button>
+      <p id="save-note" class="note" role="status"></p>
+      <div class="author-follow" id="author-follow" role="group" aria-label="关注提示" hidden>
+        <span>喜欢这个工具？</span>
+        <button type="button" id="follow-author">关注作者</button>
+        <button type="button" id="dismiss-follow">暂不</button>
+      </div>
+      <p id="follow-note" class="note" role="status"></p>
+    </footer>
+  </main>
+  <script src="./custom-patterns.js"></script>
+  <script src="./draft-store.js"></script>
+  <script src="./local-preview.js" data-web-preview></script>
+  <script src="./han-characters.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
