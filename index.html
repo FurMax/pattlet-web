@@ -295,7 +295,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
     <section id="fabric-panel" aria-labelledby="fabric-tab">
       <div class="spacing-heading theme-heading">
-        <h2 id="theme-label">主题搭配</h2>
+        <h2 id="theme-label">整串换花纹</h2>
         <div class="pattern-actions">
           <input id="custom-file" class="pattern-file" type="file" aria-label="上传纹样" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" disabled>
           <label for="custom-file" class="upload-choice upload-primary">上传纹样</label>
@@ -317,7 +317,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <button type="button" class="theme" data-theme="minnan" aria-pressed="false" disabled>闽南花纸</button>
       </div>
       <div class="glyph-editor">
-        <h2>单字编辑</h2>
         <div id="fabric-glyph-slot" data-glyph-slot>
           <div id="glyph-picker">
             <p id="selection-note" class="note" role="status">输入文字后可逐字编辑。</p>
@@ -325,33 +324,38 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           </div>
         </div>
         <div class="pattern-library" id="pattern-library">
-          <h2 id="pattern-library-label">选择花纹</h2>
-          <div class="choices pattern-source-tabs" role="group" aria-labelledby="pattern-library-label">
+          <div class="choices pattern-source-tabs" role="group" aria-label="布样来源">
             <button type="button" data-library="builtin" aria-controls="swatches" aria-pressed="true" disabled>内置纹样</button>
             <button type="button" data-library="custom" aria-controls="swatches" aria-pressed="false" disabled>我的纹样</button>
             <button type="button" data-library="favorites" aria-controls="swatches" aria-pressed="false" disabled>我的收藏</button>
           </div>
-          <details id="pattern-controls">
-            <summary id="pattern-label">纹样变换</summary>
-            <div role="group" aria-labelledby="pattern-label">
-              <div class="spacing-heading">
-                <label for="pattern-scale">纹样缩放</label>
-                <output for="pattern-scale">100%</output>
-                <button class="slider-reset" id="pattern-reset" type="button" disabled>恢复默认</button>
-              </div>
-              <input id="pattern-scale" data-pattern="scale" type="range" min="50" max="200" step="1" value="100" disabled>
-              <div class="spacing-heading">
-                <label for="pattern-x">水平偏移</label>
-                <output for="pattern-x">0%</output>
-              </div>
-              <input id="pattern-x" data-pattern="x" type="range" min="-50" max="50" step="1" value="0" disabled>
-              <div class="spacing-heading">
-                <label for="pattern-y">垂直偏移</label>
-                <output for="pattern-y">0%</output>
-              </div>
-              <input id="pattern-y" data-pattern="y" type="range" min="-50" max="50" step="1" value="0" disabled>
+          <div class="pattern-tools">
+            <div class="fabric-source" id="builtin-filter">
+              <label for="fabric-theme">筛选布样</label>
+              <select id="fabric-theme" disabled></select>
             </div>
-          </details>
+            <details id="pattern-controls">
+              <summary id="pattern-label">纹样变换</summary>
+              <div role="group" aria-labelledby="pattern-label">
+                <div class="spacing-heading">
+                  <label for="pattern-scale">纹样缩放</label>
+                  <output for="pattern-scale">100%</output>
+                  <button class="slider-reset" id="pattern-reset" type="button" disabled>恢复默认</button>
+                </div>
+                <input id="pattern-scale" data-pattern="scale" type="range" min="50" max="200" step="1" value="100" disabled>
+                <div class="spacing-heading">
+                  <label for="pattern-x">水平偏移</label>
+                  <output for="pattern-x">0%</output>
+                </div>
+                <input id="pattern-x" data-pattern="x" type="range" min="-50" max="50" step="1" value="0" disabled>
+                <div class="spacing-heading">
+                  <label for="pattern-y">垂直偏移</label>
+                  <output for="pattern-y">0%</output>
+                </div>
+                <input id="pattern-y" data-pattern="y" type="range" min="-50" max="50" step="1" value="0" disabled>
+              </div>
+            </details>
+          </div>
           <div id="custom-empty" class="pattern-empty" hidden>
             <p>上传喜欢的图片，做成专属花纹。</p>
             <label for="custom-file" class="slider-reset upload-choice">上传第一张</label>
@@ -372,10 +376,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             </select>
           </div>
           <p id="fabric-note" class="note" role="status" hidden></p>
-          <div class="fabric-source" id="builtin-filter">
-            <label for="fabric-theme">主题筛选</label>
-            <select id="fabric-theme" disabled></select>
-          </div>
           <div class="choices" id="swatches" role="group" aria-label="花纹列表"></div>
         </div>
       </div>

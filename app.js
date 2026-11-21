@@ -71,7 +71,10 @@
       ["奶油蓝细条", "cream-blue-pinstripe"],
       ["粉彩蝴蝶结拼布", "pastel-bow-patchwork"],
       ["苹果绿小雏菊", "apple-green-daisies"],
-      ["粉彩细竖条", "pastel-vertical-stripes"]
+      ["粉彩细竖条", "pastel-vertical-stripes"],
+      ["米白复古提花", "ivory-damask"],
+      ["奶油黄星", "butter-stars"],
+      ["晴蓝奶黄星", "sky-yellow-stars"]
     ],
     candy: [
       ["糖果粉横条", "candy-pink-stripes"],
@@ -106,7 +109,10 @@
       ["红底白点", "candy-red-white-dots"],
       ["白底红点", "candy-white-red-dots"],
       ["彩色积木", "candy-color-blocks"],
-      ["粉绿晕染", "candy-pink-green-halos"]
+      ["粉绿晕染", "candy-pink-green-halos"],
+      ["蓝米菱格红星", "candy-blue-red-star-diamonds"],
+      ["黑白棋盘格", "candy-black-white-checker"],
+      ["红白棋盘格", "candy-red-white-checker"]
     ],
     special: [
       ["花卉刺绣蕾丝", "special-floral-lace"],
@@ -142,7 +148,8 @@
       ["橄榄绿迷彩", "special-olive-camouflage"],
       ["沙色迷彩", "special-sand-camouflage"],
       ["银灰拉丝金属", "special-brushed-metal"],
-      ["红砖墙", "special-red-brick"]
+      ["红砖墙", "special-red-brick"],
+      ["蓝釉方砖", "special-blue-square-tiles"]
     ],
     holiday: [
       ["红绿织纹格", "holiday-tartan"],
@@ -212,7 +219,8 @@
   const editorButtons = Array.from(document.querySelectorAll(".editor-controls button"));
   const editorPanel = document.getElementById("editor-panel");
   const workspace = editorPanel.parentNode;
-  const panelHeightQuery = window.matchMedia("(min-height: 760px)");
+  const narrowWorkspace = window.matchMedia("(max-width: 600px)");
+  const visualViewport = window.visualViewport;
   const fabricTab = document.getElementById("fabric-tab");
   const typefaceTab = document.getElementById("typeface-tab");
   const typefacePanel = document.getElementById("typeface-panel");
@@ -893,6 +901,8 @@
   }
 
   function updatePreview() {
+    const compact = narrowWorkspace.matches && viewportHeight() < 760 && !workspace.classList.contains("input-active");
+    workspace.classList.toggle("compact-preview", compact);
     if (!currentLayout) {
       previewViewport.classList.remove("moving");
       previewArt.style.width = "";
@@ -906,7 +916,7 @@
     // Let the transformed canvas grow at the scale of the untransformed layout.
     const height = Math.max(currentLayout.defaultHeight, currentLayout.unshiftedHeight);
     const rows = text.split("\n").filter(function (line) { return line.trim(); }).length;
-    const displayHeight = 112 + (rows - 1) * 16;
+    const displayHeight = compact ? 80 + (rows - 1) * 8 : 112 + (rows - 1) * 16;
     const dragging = drag && drag.frame;
     previewViewport.classList.toggle("moving", Boolean(dragging));
     previewScale = dragging ? drag.frame.scale : Math.min(available / currentLayout.defaultWidth, displayHeight / height, 1);
@@ -1133,22 +1143,28 @@
       button.setAttribute("aria-pressed", String(active));
       document.getElementById(button.getAttribute("aria-controls")).hidden = !active;
     });
+    updateSelectionNote(selectedCharacterLabel());
     editorPanel.scrollTop = 0;
     return true;
   }
 
+  function viewportHeight() {
+    return visualViewport && visualViewport.scale === 1
+      ? Math.min(window.innerHeight, visualViewport.height) : window.innerHeight;
+  }
+
   function updateScrollMode() {
-    if (!panelHeightQuery.matches || workspace.classList.contains("input-active")) return;
-    const pageScroll = workspace.classList.contains("page-scroll");
-    if (pageScroll && window.pageYOffset > 0) return;
+    const height = Math.floor(viewportHeight());
+    const panelScroll = workspace.classList.contains("panel-scroll");
     const footerSpace = saveArea.offsetHeight + parseFloat(getComputedStyle(editorPanel).marginBottom);
-    const room = window.innerHeight - editorPanel.getBoundingClientRect().top - footerSpace;
-    // Keep room for the wrapped letter picker and its focus outlines.
-    const usePage = room < 176;
-    if (pageScroll === usePage) return;
+    const room = height - editorPanel.getBoundingClientRect().top - window.pageYOffset - footerSpace;
+    const usePanel = !workspace.classList.contains("input-active") && (narrowWorkspace.matches || height >= 760) && room >= 120 &&
+      (panelScroll || window.pageYOffset < 1);
+    if (usePanel) workspace.style.setProperty("--panel-viewport-height", height + "px");
+    if (panelScroll === usePanel) return;
     const offset = editorPanel.scrollTop;
-    workspace.classList.toggle("page-scroll", usePage);
-    if (usePage && offset) window.scrollBy(0, offset);
+    workspace.classList.toggle("panel-scroll", usePanel);
+    if (!usePanel && offset && !workspace.classList.contains("input-active")) window.scrollBy(0, offset);
   }
 
   function revealEditorItem(item) {
@@ -1158,7 +1174,7 @@
     const panel = editorPanel.getBoundingClientRect();
     const footer = saveArea.getBoundingClientRect();
     const top = (panelScrolls ? panel.top : 0) + 6;
-    const bottom = (panelScrolls ? panel.bottom : Math.min(window.innerHeight, footer.top)) - 6;
+    const bottom = (panelScrolls ? panel.bottom : Math.min(viewportHeight(), footer.top)) - 6;
     if (bottom <= top) return;
     const offset = bounds.top < top ? bounds.top - top
       : Math.max(0, Math.min(bounds.top - top, bounds.bottom - bottom));
@@ -1170,9 +1186,29 @@
   editorButtons.forEach(function (button) {
     button.addEventListener("click", function () {
       if (!showEditor(button)) return;
-      revealEditorItem(button === typefaceTab ? fontModeButtons[0] : glyphPicker);
+      const selectedButton = glyphs.children[selected];
+      const pickerNeedsScrolling = workspace.classList.contains("panel-scroll") &&
+        glyphPicker.offsetHeight > editorPanel.clientHeight - 12;
+      revealEditorItem(button === typefaceTab ? fontModeButtons[0]
+        : pickerNeedsScrolling && selectedButton ? selectedButton : glyphPicker);
     });
   });
+
+  function selectedCharacterLabel() {
+    const character = letters[selected];
+    if (!character) return "";
+    const repeated = letters.indexOf(character) !== letters.lastIndexOf(character);
+    return character + (repeated ? "（第 " + (selected + 1) + " 个）" : "");
+  }
+
+  function updateSelectionNote(character) {
+    let message = letters ? "请选择一个字符。" : "输入文字后可逐字编辑。";
+    if (character) {
+      message = glyphPicker.parentNode.id === "fabric-glyph-slot"
+        ? "给 " + character + " 换花纹" : "正在编辑 · " + character;
+    }
+    if (selectionNote.textContent !== message) selectionNote.textContent = message;
+  }
 
   function updateSelections() {
     const style = letterStyles[selected];
@@ -1187,12 +1223,9 @@
     updateOutlineControls(style);
     updatePatternControls(style);
     updatePositionControls(style);
-    const character = letters[selected];
-    const repeated = character && letters.indexOf(character) !== letters.lastIndexOf(character);
-    const label = style ? " · " + character + (repeated ? "（第 " + (selected + 1) + " 个）" : "") : "";
-    singleLabel.textContent = "单字调整" + label;
-    selectionNote.textContent = style ? "正在编辑" + label
-      : letters ? "请选择一个字母。" : "输入文字后可逐字编辑。";
+    const character = selectedCharacterLabel();
+    singleLabel.textContent = character ? "单字调整 · " + character : "单字调整";
+    updateSelectionNote(character);
     selectionNote.classList.toggle("has-selection", Boolean(style));
     glyphResetMenu.hidden = !style;
     if (!style) glyphResetMenu.open = false;
@@ -1221,6 +1254,7 @@
 
   function updateGlyphButtons() {
     glyphs.textContent = "";
+    glyphs.classList.toggle("short-glyph-list", letters.length > 0 && letters.length <= 10);
     Array.from(letters).forEach(function (letter, index) {
       const button = document.createElement("button");
       button.type = "button";
@@ -1521,15 +1555,23 @@
     composing = false;
     readInput();
   });
-  input.addEventListener("focus", function () { workspace.classList.add("input-active"); });
-  input.addEventListener("blur", function () {
-    workspace.classList.remove("input-active");
-    updateScrollMode();
-  });
-  window.addEventListener("resize", function () {
-    finishDrag(true);
+  input.addEventListener("focus", function () {
+    workspace.classList.add("input-active");
     updatePreview();
   });
+  input.addEventListener("blur", function () {
+    workspace.classList.remove("input-active");
+    updatePreview();
+  });
+  function resizePreview() {
+    finishDrag(true);
+    updatePreview();
+  }
+  window.addEventListener("resize", resizePreview);
+  if (visualViewport) visualViewport.addEventListener("resize", resizePreview);
+  window.addEventListener("scroll", function () {
+    if (window.pageYOffset < 1) updateScrollMode();
+  }, { passive: true });
   window.addEventListener("blur", function () { finishDrag(true); });
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) {
@@ -1834,6 +1876,37 @@
     });
   });
 
+  let previewScrollTouch = null;
+  previewViewport.addEventListener("touchstart", function (event) {
+    previewScrollTouch = null;
+    if (event.defaultPrevented || event.touches.length !== 1 ||
+      !workspace.classList.contains("panel-scroll") || editorPanel.scrollHeight <= editorPanel.clientHeight) return;
+    const touch = event.changedTouches[0];
+    previewScrollTouch = { id: touch.identifier, x: touch.clientX, y: touch.clientY, vertical: false };
+  }, { passive: true });
+  previewViewport.addEventListener("touchmove", function (event) {
+    const gesture = previewScrollTouch;
+    if (!gesture || event.defaultPrevented || event.touches.length !== 1 || !event.cancelable) return;
+    const touch = Array.from(event.changedTouches).find(function (item) { return item.identifier === gesture.id; });
+    if (!touch) return;
+    const dy = touch.clientY - gesture.y;
+    if (!gesture.vertical) {
+      const dx = touch.clientX - gesture.x;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 6) return;
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        previewScrollTouch = null;
+        return;
+      }
+      gesture.vertical = true;
+    }
+    event.preventDefault();
+    editorPanel.scrollTop -= dy;
+    gesture.y = touch.clientY;
+  }, { passive: false });
+  ["touchend", "touchcancel"].forEach(function (name) {
+    previewViewport.addEventListener(name, function () { previewScrollTouch = null; });
+  });
+
   art.addEventListener("pointerdown", function (event) {
     if (event.pointerType === "touch" || event.button !== 0 || event.isPrimary === false) return;
     ignoreDragClick = false;
@@ -2002,12 +2075,14 @@
     }
   });
 
-  function paintDesktopExport() {
+  function exportScale(maxSide) {
     const { width, height } = currentLayout;
-    const maxSide = 8192;
     const maxPixels = 16 * 1024 * 1024;
-    const scale = Math.min(3, maxSide / Math.max(width, height), Math.sqrt(maxPixels / (width * height)));
-    const canvas = document.createElement("canvas");
+    return Math.min(3, maxSide / Math.max(width, height), Math.sqrt(maxPixels / (width * height)));
+  }
+
+  function paintExport(canvas, scale) {
+    const { width, height } = currentLayout;
     canvas.width = Math.max(1, Math.floor(width * scale));
     canvas.height = Math.max(1, Math.floor(height * scale));
     const target = canvas.getContext("2d");
@@ -2015,7 +2090,27 @@
     const detailScale = Math.ceil(scale);
     target.scale(scale, scale);
     glyphLayout.forEach(function (glyph) { paintGlyph(glyph, target, detailScale, cache); });
-    return canvas;
+  }
+
+  function encodeAlbumPng() {
+    const byteBudget = 2000000;
+    const prefix = "data:image/png;base64,";
+    const canvas = document.createElement("canvas");
+    let scale = exportScale(maxCanvasSide);
+    try {
+      while (true) {
+        paintExport(canvas, scale);
+        const png = canvas.toDataURL("image/png");
+        if (!png.startsWith(prefix)) throw new Error("PNG encoding failed");
+        const padding = png.endsWith("==") ? 2 : Number(png.endsWith("="));
+        const bytes = (png.length - prefix.length) * 3 / 4 - padding;
+        if (bytes <= byteBudget) return png;
+        scale *= Math.min(.96, Math.sqrt(byteBudget / bytes) * .98);
+      }
+    } finally {
+      canvas.width = 1;
+      canvas.height = 1;
+    }
   }
 
   save.addEventListener("click", async function () {
@@ -2041,11 +2136,13 @@
     if (!download) showSaveStatus("正在保存到相册…");
     try {
       if (download) {
-        await localPreview.downloadPNG(paintDesktopExport());
+        const canvas = document.createElement("canvas");
+        paintExport(canvas, exportScale(8192));
+        await localPreview.downloadPNG(canvas);
         showSaveStatus("已发起下载，请查看浏览器的下载记录。");
         return;
       }
-      let filePath = art.toDataURL("image/png");
+      let filePath = encodeAlbumPng();
       if (filePath.length > 700000 && typeof api.writeTempFile === "function") {
         const result = await api.writeTempFile({ data: filePath });
         filePath = result.filePath;

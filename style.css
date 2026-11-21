@@ -249,18 +249,23 @@ main:not(.input-active) {
 }
 main:not(.input-active) > * { flex-shrink: 0; }
 main:not(.input-active) .save-area { position: sticky; bottom: 0; margin-top: auto; z-index: 1; }
-@media (min-height: 760px) {
-  main:not(.input-active):not(.page-scroll) {
-    height: calc(var(--viewport-height) - var(--top-bar-height));
-  }
-  main:not(.input-active):not(.page-scroll) > .editor-panel {
-    flex: 0 1 auto;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior-y: contain;
-    -webkit-overflow-scrolling: touch;
-  }
-  .editor-panel::-webkit-scrollbar { width: 4px; }
+main.panel-scroll {
+  min-height: 0;
+  height: calc(var(--panel-viewport-height, var(--viewport-height)) - var(--top-bar-height));
+}
+main.panel-scroll > .editor-panel {
+  flex: 0 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.editor-panel::-webkit-scrollbar { width: 4px; }
+.compact-preview .preview { min-height: 112px; padding-bottom: 4px; }
+.compact-preview .preview-viewport:not(.moving) { padding-top: 4px; padding-bottom: 4px; }
+.compact-preview .editor-controls {
+  margin-top: 8px;
+  margin-bottom: 8px;
 }
 .spacing-heading { display: flex; align-items: center; }
 .spacing-heading output { margin-left: 8px; color: var(--muted); font-size: 13px; }
@@ -286,7 +291,8 @@ input[type="color"] {
   background: var(--surface);
 }
 input[type="range"] { display: block; width: 100%; height: 32px; margin: 0; accent-color: var(--action); }
-.glyph-editor { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.glyph-editor { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); }
+#fabric-glyph-slot #selection-note { margin: 0; color: var(--ink); font-size: 14px; font-weight: 600; }
 .adjust-group { margin-top: 12px; padding-top: 12px; border-top: 1px solid #E5DFE4; }
 .adjust-group > h2 { margin: 0 0 8px; }
 .adjust-controls + .adjust-controls, .adjust-group input[type="range"] + .adjust-controls { margin-top: 8px; }
@@ -339,16 +345,24 @@ input[type="range"] { display: block; width: 100%; height: 32px; margin: 0; acce
   font-size: 14px;
   cursor: pointer;
 }
-.upload-primary { padding: 4px 10px; border-radius: 8px; background: var(--action); color: white; }
+.upload-primary {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--action);
+}
 .pattern-file:focus + .upload-choice { outline: 2px solid var(--action); outline-offset: 2px; }
 .pattern-file:disabled + .upload-choice { opacity: .58; cursor: default; }
 #custom-note:empty, #swatches:empty { display: none; }
-.pattern-library { margin-top: 12px; }
-#pattern-controls { margin-top: 8px; border-top: 1px solid #E5DFE4; }
-#pattern-controls summary { padding: 10px 2px; font-size: 14px; font-weight: 600; cursor: pointer; }
-#pattern-controls[open] { padding-bottom: 6px; }
-.pattern-source-tabs { flex-wrap: nowrap; }
-.pattern-source-tabs button { flex: 1 1 0; }
+.pattern-library { margin-top: 6px; }
+.pattern-tools { display: flex; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+.pattern-tools .fabric-source { margin: 0; }
+#pattern-controls { margin-left: auto; }
+#pattern-controls summary { min-height: 44px; padding: 11px 4px; font-size: 14px; font-weight: 600; cursor: pointer; }
+#pattern-controls[open] { flex: 0 0 100%; border-top: 1px solid #E5DFE4; padding-bottom: 6px; }
+.pattern-library .pattern-source-tabs { flex-wrap: nowrap; margin: 0; }
+.choices.pattern-source-tabs button { flex: 1 1 0; margin-bottom: 0; }
 .pattern-source-tabs button:last-child { margin-right: 0; }
 .pattern-empty {
   margin-top: 10px;
@@ -402,6 +416,9 @@ input[type="range"] { display: block; width: 100%; height: 32px; margin: 0; acce
   margin: 5px 0 0;
 }
 #glyphs button { min-width: 0; margin: 0; padding: 4px 0; }
+@media (min-width: 380px) {
+  #fabric-glyph-slot .short-glyph-list { grid-template-columns: repeat(auto-fill, minmax(29px, 1fr)); }
+}
 .font-modes { margin: 0 0 8px; }
 .font-modes button { flex: 1 1 0; margin-bottom: 0; }
 .font-modes button:last-child { margin-right: 0; }
@@ -485,7 +502,7 @@ input[type="range"] { display: block; width: 100%; height: 32px; margin: 0; acce
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-gap: 8px;
-  margin: 8px 0 0;
+  margin: 4px 0 0;
 }
 .choices .swatch { min-width: 0; margin: 0; padding: 4px 5px; font-size: 12px; }
 .swatch img { display: block; width: 100%; height: 56px; margin-bottom: 4px; border-radius: 4px; object-fit: cover; }
