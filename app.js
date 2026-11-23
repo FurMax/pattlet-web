@@ -179,6 +179,24 @@
       ["橙底彩花白点", "minnan-orange-dotted-colorful-floral"]
     ]
   };
+  // Each factor is relative to the original square crop at the slider's 100%.
+  const fabricBaseScales = {
+    "ivory-mauve-dots": .80,
+    "pastel-quilt": .65,
+    "pastel-bow-patchwork": .65,
+    "ivory-damask": .80,
+    "sky-yellow-stars": .80,
+    "candy-green-yellow-flowers": .80,
+    "candy-retro-rainbow-waves": .65,
+    "candy-black-white-checker": .80,
+    "candy-red-white-checker": .80,
+    "special-cow-print": .65,
+    "special-denim-patchwork": .65,
+    "holiday-micro-dots": 1.20,
+    "holiday-retro-dots": .80,
+    "holiday-red-fleur-de-lis": 1.20,
+    "holiday-argyle": .65
+  };
   const fabricCatalog = new Map();
   const customPatterns = window.PrintyPatterns;
   const localPreview = window.PrintyLocalPreview;
@@ -188,6 +206,7 @@
         id,
         name,
         src: "./assets/" + id + ".webp",
+        baseScale: fabricBaseScales[id] || 1,
         composition: id === "special-newspaper-collage" ? "newspaper" : "single",
         image: null
       });
@@ -647,14 +666,17 @@
       edge.strokeStyle = color;
       edge.lineWidth = 7 * glyph.scale;
       edge.strokeText(glyph.letter, x, y);
+      paintExteriorMask(glyph, inset, canvas.width, canvas.height);
+      edge.globalCompositeOperation = "destination-in";
+      edge.drawImage(exteriorMask, 0, 0);
     } else {
       edge.strokeStyle = outline.color;
       edge.lineWidth = 2 * outline.width * glyph.scale;
       edge.strokeText(glyph.letter, x, y);
+      // Keep the stroke on the empty side of every contour, including counters.
+      edge.globalCompositeOperation = "destination-out";
+      edge.fillText(glyph.letter, x, y);
     }
-    paintExteriorMask(glyph, inset, canvas.width, canvas.height);
-    edge.globalCompositeOperation = "destination-in";
-    edge.drawImage(exteriorMask, 0, 0);
 
     if (cache.size >= borderCacheLimit) cache.delete(cache.keys().next().value);
     cache.set(key, canvas);
@@ -723,7 +745,7 @@
     const left = Math.max(scratch.width - crop, Math.min(0, preferredLeft));
     const top = Math.max(scratch.height - crop, Math.min(0, preferredTop));
     if (fabric.composition !== "newspaper") {
-      drawFabric(image, left, top, crop, crop, pattern);
+      drawFabric(image, left, top, crop, crop, pattern, "mirror", fabric.baseScale);
       return;
     }
     mask.drawImage(image, left, top, crop, crop);
@@ -737,12 +759,12 @@
     }
   }
 
-  function drawFabric(image, left, top, width, height, pattern, fill = "mirror") {
-    if (fill === "mirror" && !hasPatternTransform(pattern)) {
+  function drawFabric(image, left, top, width, height, pattern, fill = "mirror", baseScale = 1) {
+    if (fill === "mirror" && baseScale === 1 && !hasPatternTransform(pattern)) {
       mask.drawImage(image, left, top, width, height);
       return;
     }
-    const zoom = pattern.scale / 100;
+    const zoom = baseScale * pattern.scale / 100;
     const tileWidth = Math.max(1, Math.round(width * zoom));
     const tileHeight = Math.max(1, Math.round(height * zoom));
     const centerX = scratch.width / 2;
